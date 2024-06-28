@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Genealogy Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.19.1/cytoscape.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .banner {
+            background-color: #3498db;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .left-column {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .right-column {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        #cy {
+            width: 100%;
+            height: 500px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #condition-select,
+        #tell-more-btn {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        #tell-more-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #tell-more-btn:hover {
+            background-color: #27ae60;
+        }
+
+        #tell-more-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        #analysis,
+        #condition-details {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #analysis h2 {
+            margin-bottom: 20px;
+        }
+
+        .analysis-grid {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .analysis-column {
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .analysis-column h3 {
+            margin-top: 0;
+        }
+
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
+        .placeholder {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #3498db;
+        }
+
+        .risk-meter {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .risk-low {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .risk-medium {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .risk-high {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        /* New styles for the query section */
+        #query-section {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #user-query {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        #submit-query {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        #submit-query:hover {
+            background-color: #2980b9;
+        }
+
+        #query-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .language-switcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .language-switcher a {
+            margin-left: 10px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="banner">
+        <h1 id="app-title">Welcome to the Health Genealogy App!</h1>
+        <div class="language-switcher">
+            <a href="#" onclick="switchLanguage('en')">English</a>
+            <a href="#" onclick="switchLanguage('ko')">한국어</a>
+        </div>
+    </div>
+    <div class="container">
+        <div id="analysis">
+            <h2 id="health-report-title">Your Health Report</h2>
+            <div id="analysis-content" class="loading">Generating your health report...</div>
+        </div>
+
+        <!-- New query section -->
+        <div id="query-section">
+            <h2 id="ask-question-title">Ask a Question</h2>
+            <input type="text" id="user-query" placeholder="Enter your health-related question here">
+            <button id="submit-query">Submit</button>
+            <div id="query-result">
+                <h3 id="answer-title" style="display: none;">Answer:</h3>
+                <p id="answer-content"></p>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="left-column">
+                <select id="condition-select">
+                    <option value="">Select a condition</option>
+                </select>
+                <button id="tell-more-btn" disabled>Tell me more</button>
+                <div id="cy">
+                    <div class="loading" id="family-tree-loading">Generating your family health tree...</div>
+                </div>
+            </div>
+            <div class="right-column">
+                <div id="condition-details">
+                    <h2 id="condition-details-title">Condition Details</h2>
+                    <p class="placeholder" id="condition-details-placeholder">Select a condition and click "Tell me
+                        more" to see detailed information about how it relates to your family history.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cy;
+        let allConditions = new Set();
+        let analysisData = {};
+        let currentLanguage = 'en';
+
+        const translations = {
+            'en': {
+                'app_title': 'Welcome to the Health Genealogy App!',
+                'health_report_title': 'Your Health Report',
+                'generating_report': 'Generating your health report...',
+                'select_condition': 'Select a condition',
+                'tell_more': 'Tell me more',
+                'generating_tree': 'Generating your family health tree...',
+                'condition_details_title': 'Condition Details',
+                'condition_details_placeholder': 'Select a condition and click "Tell me more" to see detailed information about how it relates to your family history.',
+                'key_conditions': 'Key Hereditary Conditions to Watch For:',
+                'recommended_lab_work': 'Recommended Lab Work:',
+                'lifestyle_recommendations': 'Lifestyle Recommendations:',
+                'no_data': 'No data',
+                'analyzing_data': 'Analyzing your data...',
+                'loading_condition_details': 'Loading condition details...',
+                'details_for': 'Details for',
+                'risk': 'Risk',
+                'no_specific_info': 'No specific information available for this section.',
+                'error_fetching_details': 'Error fetching details:',
+                'error_loading_graph': 'Error loading graph:',
+                'error_loading_analysis': 'Error loading analysis:',
+                'risk_unknown': 'Unknown Risk',
+                'risk_low': 'Low Risk',
+                'risk_medium': 'Medium Risk',
+                'risk_high': 'High Risk',
+                'ask_question': "Ask a Question",
+                'question_placeholder': "Ask your health-related question here",
+                'submit': "Submit",
+                'Answer': "Answer"
+            },
+            'ko': {
+                'app_title': '건강 가계도 앱에 오신 것을 환영합니다!',
+                'health_report_title': '귀하의 건강 보고서',
+                'generating_report': '건강 보고서를 생성하는 중...',
+                'select_condition': '질환 선택',
+                'tell_more': '자세히 알아보기',
+                'generating_tree': '가족 건강 트리를 생성하는 중...',
+                'condition_details_title': '질환 상세 정보',
+                'condition_details_placeholder': '질환을 선택하고 "자세히 알아보기"를 클릭하여 가족 병력과 관련된 자세한 정보를 확인하세요.',
+                'key_conditions': '주의해야 할 주요 유전성 질환:',
+                'recommended_lab_work': '권장 검사:',
+                'lifestyle_recommendations': '생활 습관 권장 사항:',
+                'no_data': '데이터 없음',
+                'analyzing_data': '데이터 분석 중...',
+                'loading_condition_details': '질환 상세 정보 로딩 중...',
+                'details_for': '상세 정보:',
+                'risk': '위험도',
+                'no_specific_info': '이 섹션에 대한 특정 정보가 없습니다.',
+                'error_fetching_details': '상세 정보 가져오기 오류:',
+                'error_loading_graph': '그래프 로딩 오류:',
+                'error_loading_analysis': '분석 로딩 오류:',
+                'risk_unknown': '알 수 없는 위험',
+                'risk_low': '낮은 위험',
+                'risk_medium': '중간 위험',
+                'risk_high': '높은 위험',
+                'ask_question': "질문하기",
+                'question_placeholder': "건강 관련 질문을 여기에 입력하세요",
+                'submit': "제출",
+                'Answer': "답변",
+                'family_history_and_inheritance': '가족력 및 유전',
+                'lifestyle_recommendations': '생활 습관 권장 사항',
+                'relevant_lab_work': '관련 검사',
+                'risk_assessment': '위험도 평가'
+            }
+        };
+
+        function switchLanguage(lang) {
+            console.log(`Switching to language: ${lang}`);
+            // Set the language in localStorage
+            localStorage.setItem('preferredLanguage', lang);
+            // Reload the page with the new language parameter
+            window.location.href = `${window.location.pathname}?lang=${lang}`;
+        }
+
+
+        // Add this function to set the initial language when the page loads
+        function setInitialLanguage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const langParam = urlParams.get('lang');
+            const storedLang = localStorage.getItem('preferredLanguage');
+
+            if (langParam) {
+                currentLanguage = langParam;
+            } else if (storedLang) {
+                currentLanguage = storedLang;
+            } else {
+                currentLanguage = 'en'; // Default language
+            }
+
+            // Update the UI to reflect the current language
+            console.log("setting language to ", currentLanguage)
+            updateUILanguage(currentLanguage);
+        }
+
+        // Add this function to update the UI elements with the new language
+        function updateUILanguage(lang) {
+            document.getElementById('app-title').textContent = translations[lang].app_title;
+            document.getElementById('health-report-title').textContent = translations[lang].health_report_title;
+            document.getElementById('analysis-content').textContent = translations[lang].generating_report;
+            document.getElementById('condition-select').options[0].text = translations[lang].select_condition;
+            document.getElementById('tell-more-btn').textContent = translations[lang].tell_more;
+            if (document.getElementById('family-tree-loading')) {
+                document.getElementById('family-tree-loading').textContent = translations[lang].generating_tree;
+            }
+            if (document.getElementById('condition-details-title')) {
+                document.getElementById('condition-details-title').textContent = translations[lang].condition_details_title;
+            }
+            if (document.getElementById('condition-details-placeholder')) {
+                document.getElementById('condition-details-placeholder').textContent = translations[lang].condition_details_placeholder;
+            }
+
+            document.getElementById('ask-question-title').textContent = translations[lang].ask_question;
+            document.getElementById('user-query').placeholder = translations[lang].question_placeholder;
+            document.getElementById('submit-query').textContent = translations[lang].submit;
+            document.getElementById('answer-title').textContent = translations[lang].Answer + ':';
+
+        }
+
+
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            document.getElementById('app-title').textContent = translations[lang].app_title;
+            document.getElementById('health-report-title').textContent = translations[lang].health_report_title;
+            document.getElementById('analysis-content').textContent = translations[lang].generating_report;
+            document.getElementById('condition-select').options[0].text = translations[lang].select_condition;
+            document.getElementById('tell-more-btn').textContent = translations[lang].tell_more;
+            if (document.getElementById('family-tree-loading')) {
+                document.getElementById('family-tree-loading').textContent = translations[lang].generating_tree;
+            }
+            document.getElementById('condition-details-title').textContent = translations[lang].condition_details_title;
+            document.getElementById('condition-details-placeholder').textContent = translations[lang].condition_details_placeholder;
+
+            // Update any existing content
+            // if (analysisData) {
+            //    displayAnalysis(analysisData);
+            //}
+
+            fetchHealthData()
+                .then(data => {
+                    initializeCytoscape(data);
+                    populateConditionsDropdown(data.analysis.conditions);
+                    displayAnalysis(data.analysis);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('cy').innerHTML = `Error loading graph: ${error.message}`;
+                    document.getElementById('analysis-content').innerHTML = `Error loading analysis: ${error.message}`;
+                });
+
+            // Update condition details if displayed
+            const selectedCondition = document.getElementById('condition-select').value;
+            if (selectedCondition) {
+                tellMore(selectedCondition);
+            }
+            
+            updateUILanguage(lang)
+            // Re-fetch data with the new language
+            //fetchHealthData();
+        }
+
+        function fetchHealthData() {
+            console.log(`Fetching health data for language: ${currentLanguage}`);
+            return fetch(`/api/health-data?lang=${currentLanguage}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.nodes || !data.edges) {
+                        throw new Error('Data does not contain nodes or edges');
+                    }
+                    return data;
+                });
+        }
+
+        function initializeCytoscape(data) {
+            document.getElementById('cy').innerHTML = ''; // Clear the loading message
+            cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: {
+                    nodes: data.nodes,
+                    edges: data.edges
+                },
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#666',
+                            'label': 'data(label)'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 3,
+                            'line-color': '#ccc',
+                            'target-arrow-color': '#ccc',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'breadthfirst',
+                    directed: true,
+                    padding: 10
+                }
+            });
+        }
+
+        function populateConditionsDropdown(conditions) {
+            allConditions = new Set()
+            conditions.forEach(condition => {
+                if (condition) {
+                    allConditions.add(condition);
+                }
+            });
+            console.log(allConditions);
+            // reset conditions display
+            const select = document.getElementById('condition-select');
+            select.innerHTML = ''
+            select.appendChild(document.createElement('option'));
+            select.options[0].text = translations[currentLanguage].select_condition;
+
+            allConditions.forEach(condition => {
+                condition
+                const option = document.createElement('option');
+                option.value = condition;
+                option.textContent = condition;
+                select.appendChild(option);
+            });
+        }
+
+        function displayAnalysis(analysis) {
+            console.log('Displaying analysis:', analysis);
+            analysisData = analysis;
+            const analysisContent = document.getElementById('analysis-content');
+            if (analysis) {
+                let html = '<div class="analysis-grid">';
+                html += '<div class="analysis-column">';
+                html += `<h3>${translations[currentLanguage].key_conditions}</h3>`;
+                html += '<ul>' + (analysis.conditions ? analysis.conditions.map(c => `<li>${c}</li>`).join('') : translations[currentLanguage].no_data) + '</ul>';
+                html += '</div>';
+                html += '<div class="analysis-column">';
+                html += `<h3>${translations[currentLanguage].recommended_lab_work}</h3>`;
+                html += '<ul>' + (analysis.lab_work ? analysis.lab_work.map(l => `<li>${l}</li>`).join('') : translations[currentLanguage].no_data) + '</ul>';
+                html += '</div>';
+                html += '<div class="analysis-column">';
+                html += `<h3>${translations[currentLanguage].lifestyle_recommendations}</h3>`;
+                html += '<ul>' + (analysis.lifestyle ? analysis.lifestyle.map(l => `<li>${l}</li>`).join('') : translations[currentLanguage].no_data) + '</ul>';
+                html += '</div>';
+                html += '</div>';
+                analysisContent.innerHTML = html;
+                analysisContent.classList.remove('loading');
+            } else {
+                analysisContent.innerHTML = `<p>${translations[currentLanguage].analyzing_data}</p>`;
+                analysisContent.classList.remove('loading');
+            }
+        }
+
+        function highlightCondition(condition) {
+            cy.nodes().forEach(node => {
+                if (node.data('conditions') && node.data('conditions').includes(condition)) {
+                    node.style('background-color', 'red');
+                } else {
+                    node.style('background-color', '#666');
+                }
+            });
+        }
+
+        function tellMore(condition) {
+            document.getElementById('condition-details').innerHTML = `<div class="loading">${translations[currentLanguage].loading_condition_details}</div>`;
+            fetch('/api/condition-details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ condition: condition, analysis: analysisData, lang: currentLanguage }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Received data:", data);  // Debug log
+                    let detailsHtml = `<h2>${translations[currentLanguage].details_for} ${condition}</h2>`;
+
+                    // Add risk meter
+                    detailsHtml += `<div class="risk-meter risk-${data.risk_level.toLowerCase()}">${translations[currentLanguage][`risk_${data.risk_level.toLowerCase()}`]}</div>`;
+
+                    for (const [section, bullets] of Object.entries(data.sections)) {
+                        // Translate section titles
+                        const translatedSection = translations[currentLanguage][section.toLowerCase().replace(/ /g, '_')] || section;
+                        detailsHtml += `<h3>${translatedSection}</h3>`;
+                        if (bullets.length === 0) {
+                            detailsHtml += `<p>${translations[currentLanguage].no_specific_info}</p>`;
+                        } else {
+                            detailsHtml += `<ul>`;
+                            bullets.forEach(bullet => {
+                                detailsHtml += `<li>${bullet}</li>`;
+                            });
+                            detailsHtml += '</ul>';
+                        }
+                    }
+
+                    console.log("Generated HTML:", detailsHtml);  // Debug log
+                    document.getElementById('condition-details').innerHTML = detailsHtml;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('condition-details').innerHTML = `<p>${translations[currentLanguage].error_fetching_details} ${error.message}</p>`;
+                });
+        }
+
+        // New function to handle user query submission
+        function submitUserQuery() {
+            const query = document.getElementById('user-query').value;
+            const resultDiv = document.getElementById('query-result');
+
+            resultDiv.innerHTML = '<div class="loading">Processing your question...</div>';
+
+            fetch('/user_query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query, lang: currentLanguage }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    resultDiv.innerHTML = `<h3>Answer:</h3><p>${data.result}</p>`;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultDiv.innerHTML = `<p>Error processing your question: ${error.message}</p>`;
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            setInitialLanguage();
+            // Show loading message for analysis
+            displayAnalysis(null);
+
+            fetchHealthData()
+                .then(data => {
+                    console.log(data)
+                    initializeCytoscape(data);
+                    populateConditionsDropdown(data.analysis.conditions);
+                    displayAnalysis(data.analysis);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('cy').innerHTML = `Error loading graph: ${error.message}`;
+                    document.getElementById('analysis-content').innerHTML = `Error loading analysis: ${error.message}`;
+                });
+
+            document.getElementById('condition-select').addEventListener('change', function (event) {
+                const selectedCondition = event.target.value;
+                highlightCondition(selectedCondition);
+                document.getElementById('tell-more-btn').disabled = !selectedCondition;
+            });
+
+            document.getElementById('tell-more-btn').addEventListener('click', function (event) {
+                const selectedCondition = document.getElementById('condition-select').value;
+                if (selectedCondition) {
+                    tellMore(selectedCondition);
+                }
+            });
+
+            document.getElementById('submit-query').addEventListener('click', submitUserQuery);
+        });
+    </script>
+</body>
+
+</html>
